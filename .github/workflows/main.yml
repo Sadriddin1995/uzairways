@@ -1,0 +1,47 @@
+name: CI/CD Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Build frontend
+        working-directory: ./
+        run: |
+          npm install
+          npm run build
+
+      - name: Build backend
+        working-directory: ./backend
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/uzairways/uzairways
+            git pull origin main
+            npm install
+            npm run build
+            cd backend
+            npm install
+            npm run build
+            pm2 restart backend || pm2 start dist/main.js --name backend
